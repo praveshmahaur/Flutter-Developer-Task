@@ -1,7 +1,8 @@
 import 'dart:async';
+import 'dart:math';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:splash_animation/widgets/custom_button.dart';
-
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -11,6 +12,7 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
+  late final AnimationController _initialScreenController;
   late final AnimationController _logoAnimationController;
   late final AnimationController _backgroundColorController;
   late final AnimationController _contentAnimationController;
@@ -26,14 +28,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   late final Animation<double> _contentPositionAnimation;
   late final Animation<double> _textOpacityAnimation;
 
-  
   final PageController _imagePageController = PageController(initialPage: 0);
-  
+
   
   int _currentPage = 0;
   bool _showContent = false;
   bool _isNavigatingForward = true;
-  
   
   static const int _numPages = 4;
   static const int _autoSwitchIntervalSeconds = 3;
@@ -59,8 +59,14 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     super.initState();
     _initializeAnimations();
     
-    _logoAnimationController.forward();
-    _backgroundColorController.forward();
+    // Start with initial screen for 2 seconds
+    _initialScreenController.forward();
+    
+    // After 2 seconds, start logo and background animations
+    Future.delayed(const Duration(seconds: 2), () {
+      _logoAnimationController.forward();
+      _backgroundColorController.forward();
+    });
     
     _logoAnimationController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
@@ -73,13 +79,19 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   }
 
   void _initializeAnimations() {
+    // Add initial screen controller
+    _initialScreenController = AnimationController(
+      duration: const Duration(seconds: 1),
+      vsync: this,
+    );
+
     _logoAnimationController = AnimationController(
       duration: const Duration(milliseconds: 2500),
       vsync: this,
     );
     
     _backgroundColorController = AnimationController(
-      duration: const Duration(milliseconds: 2500),
+      duration: const Duration(seconds: 2500), // Changed from milliseconds to 10 seconds
       vsync: this,
     );
     
@@ -96,7 +108,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     _logoPositionYAnimation = TweenSequence<double>([
       TweenSequenceItem(
         tween: Tween<double>(begin: 0.1, end: 0.6)
-            .chain(CurveTween(curve: Curves.easeOutBack)),
+            .chain(CurveTween(curve: Curves.bounceOut)),
         weight: 35,
       ),
       TweenSequenceItem(
@@ -147,7 +159,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     _sweepAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _logoAnimationController,
-        curve: const Interval(0.65, 1.0, curve: Curves.easeOut),
+        curve: const Interval(0.65, 1.0, curve: Curves.easeInExpo),
       ),
     );
     
@@ -175,6 +187,9 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
   @override
   void dispose() {
+    // Add initial screen controller to dispose
+    _initialScreenController.dispose();
+    
     _logoAnimationController.dispose();
     _backgroundColorController.dispose();
     _contentAnimationController.dispose();
@@ -252,31 +267,36 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   );
   
   Widget _buildOnboardingText(String title) => AnimatedBuilder(
-    animation: _textAnimationController,
-    builder: (context, _) {
-      double offset = _isNavigatingForward 
-          ? (1.0 - _textOpacityAnimation.value) * 50
-          : -(1.0 - _textOpacityAnimation.value) * 50;
-      
-      return Transform.translate(
-        offset: Offset(0, offset),
-        child: Opacity(
-          opacity: _textOpacityAnimation.value,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF212121),
-              ),
+  animation: _textAnimationController,
+  builder: (context, _) {
+    // Determine the direction of animation based on page navigation
+    bool isForward = _isNavigatingForward;
+    
+    // Create a more natural sliding and fade effect
+    double slideOffset = isForward 
+        ? (1.0 - _textOpacityAnimation.value) * 20  // Slide from bottom
+        : -(1.0 - _textOpacityAnimation.value) * 20;  // Slide from top
+    
+    return Transform.translate(
+      offset: Offset(0, slideOffset),
+      child: Opacity(
+        opacity: _textOpacityAnimation.value,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 40,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF212121),
             ),
+            textAlign: TextAlign.left,
           ),
         ),
-      );
-    },
-  );
+      ),
+    );
+  },
+);
 
   @override
   Widget build(BuildContext context) {
@@ -284,6 +304,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     
     return AnimatedBuilder(
       animation: Listenable.merge([
+        _initialScreenController,
         _logoAnimationController, 
         _backgroundColorController,
         _contentAnimationController
@@ -292,11 +313,19 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
         body: SafeArea(
           child: Stack(
             children: [
+              // Initial blank screen with specific color
+              Positioned.fill(
+                child: Container(
+                  color: const Color.fromARGB(255, 184, 196, 205),
+                ),
+              ),
+              
               Positioned.fill(
                 child: CustomPaint(
                   painter: SweepingColorPainter(
-                    startColor: const Color.fromARGB(255, 184, 196, 205),
-                    endColor: Colors.white,
+                    initialBackgroundColor:const Color.fromARGB(255, 184, 196, 205),
+                    transitionBackgroundColor:Colors.white,
+                    circleColor: const Color.fromARGB(255, 184, 196, 205),   
                     animationValue: _sweepAnimation.value,
                   ),
                 ),
@@ -304,7 +333,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
               
               Positioned(
                 left: size.width * _logoPositionXAnimation.value - (45 * _logoScaleAnimation.value),
-                top: size.height * _logoPositionYAnimation.value - (80 * _logoScaleAnimation.value),
+                top: size.height * _logoPositionYAnimation.value - (105 * _logoScaleAnimation.value),
                 child: Transform.scale(
                   scale: _logoScaleAnimation.value,
                   child: Opacity(
@@ -316,7 +345,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
               
               if (_showContent)
                 Positioned.fill(
-                  top: size.height * 0.12,
+                  top: size.height * 0.10,
                   child: Transform.translate(
                     offset: Offset(0, _contentPositionAnimation.value),
                     child: Opacity(
@@ -324,7 +353,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                       child: Column(
                         children: [
                           Container(
-                            height: 82,
+                            height: 100,
                             alignment: Alignment.topLeft,
                             child: _buildOnboardingText(_titles[_currentPage]),
                           ),
@@ -366,49 +395,62 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 }
 
 class SweepingColorPainter extends CustomPainter {
-  final Color startColor;
-  final Color endColor;
+  final Color circleColor;
+  final Color initialBackgroundColor;
+  final Color transitionBackgroundColor;
   final double animationValue;
 
   const SweepingColorPainter({
-    required this.startColor,
-    required this.endColor,
+    required this.circleColor,
+    required this.initialBackgroundColor,
+    required this.transitionBackgroundColor,
     required this.animationValue,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Background Color Interpolation
+    Color backgroundColor = Color.lerp(
+      initialBackgroundColor, transitionBackgroundColor, animationValue
+    )!;
+
+    // Background fill with animated color transition
     canvas.drawRect(
       Rect.fromLTWH(0, 0, size.width, size.height),
-      Paint()..color = endColor,
+      Paint()..color = backgroundColor,
     );
 
-    if (animationValue < 1.0) {
-      double visiblePortion = 1.0 - animationValue;
-      
-      double startX = size.width * (1.0 + visiblePortion);
-      double startY = size.height * (1.0 + visiblePortion);
-      double endX = size.width * (-visiblePortion);
-      double endY = size.height * (-visiblePortion);
-      
-      final path = Path()
-        ..moveTo(startX, endY)
-        ..lineTo(startX, startY)
-        ..lineTo(endX, startY)
-        ..lineTo(endX, endY)
-        ..close();
-      
-      canvas.drawPath(path, Paint()..color = startColor);
+    if (animationValue > 0) {
+      double screenWidth = PlatformDispatcher.instance.views.first.physicalSize.width /
+                           PlatformDispatcher.instance.views.first.devicePixelRatio;
+
+      // Reveal Effect ke origin point
+      Offset revealOrigin = Offset(screenWidth / 8, -45);
+
+      // Maximum radius jo screen ko cover kare
+      double maxRadius = sqrt(size.width * size.width + size.height * size.height);
+
+      // Circular Reveal ke liye path
+      Path revealPath = Path()
+        ..addOval(Rect.fromCircle(
+          center: revealOrigin, 
+          radius: maxRadius * (1 - animationValue), // Shrink effect
+        ));
+
+      // Sweeping Circle draw karo
+      canvas.drawPath(
+        revealPath,
+        Paint()
+          ..color = circleColor
+          ..blendMode = BlendMode.srcOver,
+      );
     }
   }
 
   @override
   bool shouldRepaint(SweepingColorPainter oldDelegate) =>
       oldDelegate.animationValue != animationValue ||
-      oldDelegate.startColor != startColor ||
-      oldDelegate.endColor != endColor;
+      oldDelegate.circleColor != circleColor ||
+      oldDelegate.initialBackgroundColor != initialBackgroundColor ||
+      oldDelegate.transitionBackgroundColor != transitionBackgroundColor;
 }
-
-
-
-
