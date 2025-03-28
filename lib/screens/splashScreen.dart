@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:splash_animation/widgets/custom_button.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -11,12 +12,12 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with TickerProviderStateMixin {
   late final AnimationController _initialScreenController;
   late final AnimationController _logoAnimationController;
   late final AnimationController _backgroundColorController;
   late final AnimationController _contentAnimationController;
-  late final AnimationController _textAnimationController;
 
   late final Animation<double> _logoPositionYAnimation;
   late final Animation<double> _logoPositionXAnimation;
@@ -26,18 +27,16 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
   late final Animation<double> _contentOpacityAnimation;
   late final Animation<double> _contentPositionAnimation;
-  late final Animation<double> _textOpacityAnimation;
 
   final PageController _imagePageController = PageController(initialPage: 0);
 
-  
   int _currentPage = 0;
   bool _showContent = false;
   bool _isNavigatingForward = true;
-  
+
   static const int _numPages = 4;
   static const int _autoSwitchIntervalSeconds = 3;
-  
+
   Timer? _pageAutoSwitchTimer;
 
   final List<String> _imagePaths = [
@@ -46,7 +45,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     'assets/images/image3.jpeg',
     'assets/images/image4.jpeg',
   ];
-  
+
   final List<String> _titles = [
     'Expert Guidance for Smart Moves!',
     'Buy, Sell & Rent - All in One Place!',
@@ -58,28 +57,26 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   void initState() {
     super.initState();
     _initializeAnimations();
-    
+
     // Start with initial screen for 2 seconds
     _initialScreenController.forward();
-    
+
     // After 2 seconds, start logo and background animations
     Future.delayed(const Duration(seconds: 2), () {
       _logoAnimationController.forward();
       _backgroundColorController.forward();
     });
-    
+
     _logoAnimationController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         setState(() => _showContent = true);
         _contentAnimationController.forward();
-        _textAnimationController.forward();
         _startAutoPageSwitchTimer();
       }
     });
   }
 
   void _initializeAnimations() {
-    // Add initial screen controller
     _initialScreenController = AnimationController(
       duration: const Duration(seconds: 1),
       vsync: this,
@@ -89,22 +86,17 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       duration: const Duration(milliseconds: 2500),
       vsync: this,
     );
-    
+
     _backgroundColorController = AnimationController(
-      duration: const Duration(seconds: 2500), // Changed from milliseconds to 10 seconds
+      duration: const Duration(seconds: 2500),
       vsync: this,
     );
-    
+
     _contentAnimationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    
-    _textAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 400),
-      vsync: this,
-    );
-    
+
     _logoPositionYAnimation = TweenSequence<double>([
       TweenSequenceItem(
         tween: Tween<double>(begin: 0.1, end: 0.6)
@@ -121,7 +113,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
         weight: 35,
       ),
     ]).animate(_logoAnimationController);
-    
+
     _logoPositionXAnimation = TweenSequence<double>([
       TweenSequenceItem(
         tween: ConstantTween<double>(0.5),
@@ -133,7 +125,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
         weight: 35,
       ),
     ]).animate(_logoAnimationController);
-    
+
     _logoScaleAnimation = TweenSequence<double>([
       TweenSequenceItem(
         tween: ConstantTween<double>(2.0),
@@ -144,7 +136,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
         weight: 35,
       ),
     ]).animate(_logoAnimationController);
-    
+
     _logoOpacityAnimation = TweenSequence<double>([
       TweenSequenceItem(
         tween: Tween<double>(begin: 0.0, end: 1.0),
@@ -155,19 +147,19 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
         weight: 90,
       ),
     ]).animate(_logoAnimationController);
-    
+
     _sweepAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _logoAnimationController,
         curve: const Interval(0.65, 1.0, curve: Curves.easeInExpo),
       ),
     );
-    
+
     _contentOpacityAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
     ).animate(_contentAnimationController);
-    
+
     _contentPositionAnimation = Tween<double>(
       begin: 200.0,
       end: 0.0,
@@ -175,137 +167,156 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       parent: _contentAnimationController,
       curve: Curves.easeOutQuad,
     ));
-    
-    _textOpacityAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _textAnimationController,
-      curve: Curves.easeOutCubic,
-    ));
   }
 
   @override
   void dispose() {
-    // Add initial screen controller to dispose
     _initialScreenController.dispose();
-    
     _logoAnimationController.dispose();
     _backgroundColorController.dispose();
     _contentAnimationController.dispose();
-    _textAnimationController.dispose();
     _imagePageController.dispose();
     _pageAutoSwitchTimer?.cancel();
     super.dispose();
   }
-  
+
   void _startAutoPageSwitchTimer() {
     _pageAutoSwitchTimer?.cancel();
     _pageAutoSwitchTimer = Timer.periodic(
-      const Duration(seconds: _autoSwitchIntervalSeconds), 
-      (_) => _animateToNextPage()
-    );
+        const Duration(seconds: _autoSwitchIntervalSeconds),
+        (_) => _animateToNextPage());
   }
-  
+
   void _animateToNextPage() {
     final int nextPage = _currentPage < _numPages - 1 ? _currentPage + 1 : 0;
     _isNavigatingForward = true;
-    _textAnimationController.reset();
+
     _imagePageController.animateToPage(
       nextPage,
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeInOut,
+      duration: const Duration(milliseconds: 100),
+      curve: Curves.elasticOut,
     );
-    _textAnimationController.forward();
   }
-  
+
   void _onPageChanged(int page) {
     if (page != _currentPage) {
-      _isNavigatingForward = (page > _currentPage) || 
-                            (_currentPage == _numPages - 1 && page == 0);
-      
+      _isNavigatingForward =
+          (page > _currentPage) || (_currentPage == _numPages - 1 && page == 0);
+
       setState(() => _currentPage = page);
-      _textAnimationController.reset();
-      _textAnimationController.forward();
     }
-    _startAutoPageSwitchTimer(); 
+    _startAutoPageSwitchTimer();
   }
 
-  List<Widget> _buildPageIndicator() => List.generate(
-    _numPages,
-    (i) => _indicator(i == _currentPage)
-  );
+  List<Widget> _buildPageIndicator() =>
+      List.generate(_numPages, (i) => _indicator(i == _currentPage));
 
   Widget _indicator(bool isActive) => AnimatedContainer(
-    duration: const Duration(milliseconds: 150),
-    margin: const EdgeInsets.symmetric(horizontal: 4.0),
-    height: 8.0,
-    width: isActive ? 24.0 : 8.0,
-    decoration: BoxDecoration(
-      color: isActive ? const Color(0xFF2196F3) : const Color(0xFFE0E0E0),
-      borderRadius: BorderRadius.circular(12),
-    ),
-  );
-  
-  Widget _buildOnboardingImage(String imagePath) => Container(
-    margin: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.2),
-          spreadRadius: 2,
-          blurRadius: 10,
-          offset: const Offset(0, 5),
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.symmetric(horizontal: 4.0),
+        height: 8.0,
+        width: isActive ? 24.0 : 8.0,
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFF2196F3) : const Color(0xFFE0E0E0),
+          borderRadius: BorderRadius.circular(12),
         ),
-      ],
-      image: DecorationImage(
-        image: AssetImage(imagePath),
-        fit: BoxFit.cover,
-      ),
-    ),
-  );
-  
-  Widget _buildOnboardingText(String title) => AnimatedBuilder(
-  animation: _textAnimationController,
-  builder: (context, _) {
-    // Determine the direction of animation based on page navigation
-    bool isForward = _isNavigatingForward;
-    
-    // Create a more natural sliding and fade effect
-    double slideOffset = isForward 
-        ? (1.0 - _textOpacityAnimation.value) * 20  // Slide from bottom
-        : -(1.0 - _textOpacityAnimation.value) * 20;  // Slide from top
-    
-    return Transform.translate(
-      offset: Offset(0, slideOffset),
-      child: Opacity(
-        opacity: _textOpacityAnimation.value,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-          child: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 40,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF212121),
+      );
+
+  Widget _buildOnboardingImage(String imagePath) => Container(
+        margin: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              spreadRadius: 2,
+              blurRadius: 10,
+              offset: const Offset(0, 5),
             ),
-            textAlign: TextAlign.left,
+          ],
+          image: DecorationImage(
+            image: AssetImage(imagePath),
+            fit: BoxFit.cover,
           ),
+        ),
+      );
+
+  // Enhanced Text Animation with Smooth Sliding
+  Widget _buildOnboardingText(String title, bool isForward, String? oldTitle) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 20.0),
+      child: SizedBox(
+        height: 95, // Fixed height
+        child: Stack(
+          children: [
+            // Old text exiting quickly
+            if (oldTitle != null)
+              Positioned.fill(
+                child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      oldTitle, // Previous text
+                      style: const TextStyle(
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF212121),
+                      ),
+                      textAlign: TextAlign.left,
+                    )
+                        .animate(
+                          key: ValueKey("old_$oldTitle"),
+                        )
+                        .slideY(
+                          begin: 0,
+                          end: -1.2, // Moves up quickly
+                          duration:
+                              const Duration(milliseconds: 1200), // Fast exit
+                          curve: Curves.elasticInOut, // Smooth exit
+                        )
+                    // .fadeOut(duration: const Duration(milliseconds: 200)), // Quick fade
+                    ),
+              ),
+
+            // New text entering with delay
+            Positioned.fill(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  title, // New text
+                  style: const TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF212121),
+                  ),
+                  textAlign: TextAlign.left,
+                )
+                    .animate(
+                      key: ValueKey("new_$title"),
+                    )
+                    .slideY(
+                      begin: isForward ? 1.0 : -1.0, // Enter from bottom or top
+                      end: 0,
+                      duration: const Duration(milliseconds: 1000),
+                      delay: const Duration(
+                          milliseconds: 600), // Wait for old text to go
+                      curve: Curves.elasticOut, // Smooth enter
+                    ),
+              ),
+            ),
+          ],
         ),
       ),
     );
-  },
-);
+  }
 
   @override
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
-    
+
     return AnimatedBuilder(
       animation: Listenable.merge([
         _initialScreenController,
-        _logoAnimationController, 
+        _logoAnimationController,
         _backgroundColorController,
         _contentAnimationController
       ]),
@@ -319,30 +330,33 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                   color: const Color.fromARGB(255, 184, 196, 205),
                 ),
               ),
-              
+
               Positioned.fill(
                 child: CustomPaint(
                   painter: SweepingColorPainter(
-                    initialBackgroundColor:const Color.fromARGB(255, 184, 196, 205),
-                    transitionBackgroundColor:Colors.white,
-                    circleColor: const Color.fromARGB(255, 184, 196, 205),   
+                    initialBackgroundColor:
+                        const Color.fromARGB(255, 184, 196, 205),
+                    transitionBackgroundColor: Colors.white,
+                    circleColor: const Color.fromARGB(255, 184, 196, 205),
                     animationValue: _sweepAnimation.value,
                   ),
                 ),
               ),
-              
+
               Positioned(
-                left: size.width * _logoPositionXAnimation.value - (45 * _logoScaleAnimation.value),
-                top: size.height * _logoPositionYAnimation.value - (105 * _logoScaleAnimation.value),
+                left: size.width * _logoPositionXAnimation.value -
+                    (45 * _logoScaleAnimation.value),
+                top: size.height * _logoPositionYAnimation.value -
+                    (105 * _logoScaleAnimation.value),
                 child: Transform.scale(
                   scale: _logoScaleAnimation.value,
                   child: Opacity(
-                    opacity: _logoOpacityAnimation.value,
-                    child: Image.asset('assets/logo/NextDeals.png', height: 160, width: 190)
-                  ),
+                      opacity: _logoOpacityAnimation.value,
+                      child: Image.asset('assets/logo/NextDeals.png',
+                          height: 160, width: 190)),
                 ),
               ),
-              
+
               if (_showContent)
                 Positioned.fill(
                   top: size.height * 0.10,
@@ -353,31 +367,40 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                       child: Column(
                         children: [
                           Container(
+                            // color: Colors.amber,
                             height: 100,
                             alignment: Alignment.topLeft,
-                            child: _buildOnboardingText(_titles[_currentPage]),
+                            child: ClipRRect(
+                              child: _buildOnboardingText(
+                                  _titles[_currentPage],
+                                  _isNavigatingForward,
+                                  _currentPage > 0
+                                      ? _titles[_currentPage - 1]
+                                      : null),
+                            ),
                           ),
-                          const SizedBox(height: 5),
+                          const SizedBox(height: 10),
                           Expanded(
                             child: PageView.builder(
-                              physics: const ClampingScrollPhysics(),
-                              controller: _imagePageController,
+                              controller:
+                                  _imagePageController, // Use this instead of _pageController
                               itemCount: _numPages,
                               onPageChanged: _onPageChanged,
-                              itemBuilder: (_, index) => _buildOnboardingImage(_imagePaths[index]),
+                              itemBuilder: (_, index) =>
+                                  _buildOnboardingImage(_imagePaths[index]),
                             ),
                           ),
                           Column(
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: _buildPageIndicator()
-                              ),
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: _buildPageIndicator()),
                               const SizedBox(height: 20),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 30),
-                                child: CustomButton(text: 'Get Started', onPressed: (){})
-                              ),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 30),
+                                  child: CustomButton(
+                                      text: 'Get Started', onPressed: () {})),
                               const SizedBox(height: 30),
                             ],
                           ),
@@ -411,8 +434,7 @@ class SweepingColorPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     // Background Color Interpolation
     Color backgroundColor = Color.lerp(
-      initialBackgroundColor, transitionBackgroundColor, animationValue
-    )!;
+        initialBackgroundColor, transitionBackgroundColor, animationValue)!;
 
     // Background fill with animated color transition
     canvas.drawRect(
@@ -421,19 +443,21 @@ class SweepingColorPainter extends CustomPainter {
     );
 
     if (animationValue > 0) {
-      double screenWidth = PlatformDispatcher.instance.views.first.physicalSize.width /
-                           PlatformDispatcher.instance.views.first.devicePixelRatio;
+      double screenWidth =
+          PlatformDispatcher.instance.views.first.physicalSize.width /
+              PlatformDispatcher.instance.views.first.devicePixelRatio;
 
       // Reveal Effect ke origin point
       Offset revealOrigin = Offset(screenWidth / 8, -45);
 
       // Maximum radius jo screen ko cover kare
-      double maxRadius = sqrt(size.width * size.width + size.height * size.height);
+      double maxRadius =
+          sqrt(size.width * size.width + size.height * size.height);
 
       // Circular Reveal ke liye path
       Path revealPath = Path()
         ..addOval(Rect.fromCircle(
-          center: revealOrigin, 
+          center: revealOrigin,
           radius: maxRadius * (1 - animationValue), // Shrink effect
         ));
 
